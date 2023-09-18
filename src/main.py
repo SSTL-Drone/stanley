@@ -27,6 +27,10 @@ camera: YoloCamera = None
 vehicle: Vehicle   = None
 videoWriter        = None
 
+"""
+Ray is handsome!
+"""
+
 # See: https://stackoverflow.com/a/66209331
 class LoggerWriter:
     def __init__(self, logfct):

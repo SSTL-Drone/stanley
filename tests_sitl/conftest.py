@@ -93,7 +93,8 @@ def prepareForTest(timeout = True, verbose=False) -> Tuple[Core, Vehicle, MockCa
 
     HOME = '-35.363261,149.165230,584,353'
 
-    sitl = SITL(path=os.path.abspath('./.dronekit/arducopter'), defaults_filepath=os.path.abspath('./.dronekit/copter-hexa.parm'))
+    # sitl = SITL(path=os.path.abspath('./.dronekit/arducopter'), defaults_filepath=os.path.abspath('./.dronekit/copter-hexa.parm'))
+    sitl = SITL(path='/home/sstl/codes/ardupilot/build/Pixhawk6C/bin/arducopter')
     sitl_args = ['--model', 'hexa']
     sitl.launch(sitl_args, await_ready=True, restart=False, verbose=verbose)
 
