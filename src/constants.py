@@ -1,5 +1,5 @@
-ALTITUDE           = 1.75  # meters above home position
-ALTITUDE_FUZZINESS = 0.1  # meters around ALTITUDE to allow as error
+ALTITUDE           = 0.0  # meters above home position
+ALTITUDE_FUZZINESS = 0.0  # meters around ALTITUDE to allow as error
 MINIMUM_DISTANCE   = 4    # ideal meters away from person
 BACKOFF_DISTANCE   = 3.6  # meters away from person to trigger backoff rule
 HEARTBEAT_TIMEOUT  = 2    # seconds

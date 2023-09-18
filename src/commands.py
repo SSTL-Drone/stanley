@@ -55,6 +55,7 @@ def setPositionTarget(vehicle: Vehicle, position: Tuple[float, float], yawRate: 
             0, 0, 0, # x, y, z acceleration (not used)
             0, math.radians(yawRate))    # yaw, yaw_rate
 
+        # print(f'coordinate_frame: {mavutil.mavlink.MAV_FRAME_BODY_FRD}')
         vehicle.send_mavlink(msg)
 
 def setLoiterGuided(vehicle: Vehicle, yawRate: float) -> None:

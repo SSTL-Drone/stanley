@@ -18,6 +18,7 @@ import signal
 import cv2
 import platform
 import logging
+from plottest import ZPlotter
 
 PARENT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 
@@ -26,10 +27,6 @@ core: Core         = None
 camera: YoloCamera = None
 vehicle: Vehicle   = None
 videoWriter        = None
-
-"""
-Ray is handsome!
-"""
 
 # See: https://stackoverflow.com/a/66209331
 class LoggerWriter:
@@ -58,9 +55,12 @@ def core_thread(core):
     core.run()
     logging.debug('Stopped core')
 
-def camera_callback(detections, cvFrame):
+def camera_callback(detections, cvFrame, z):
     global videoWriter
+    cv2.imshow("frame", cvFrame)
+    cv2.waitKey(1)
     videoWriter.write(cvFrame)
+    # zplot.update_z(z)
 
 def stop():
     global EXIT, core, camera, vehicle
@@ -114,6 +114,9 @@ def main(args):
     sys.stdout = LoggerWriter(logger.info)
     sys.stderr = LoggerWriter(logger.error)
 
+    global zplot
+    zplot = ZPlotter()
+
     videoEnabled = args.video
     if args.video:
         logging.info('Saving videos to: ' + args.video_path)
@@ -128,7 +131,7 @@ def main(args):
     if not EXIT:
         camera = YoloCamera(camera_callback if videoEnabled else None)
         camera.start()
-
+        
         logging.info('Searching for killswitch at: ' + args.killswitch_path)
         if os.path.exists(args.killswitch_path):
             logging.warning("Killswitch engaged, preventing core run")
@@ -156,13 +159,14 @@ def main(args):
     if videoWriter:
         videoWriter.release()
 
+    cv2.destroyAllWindows()
     logging.info('Thank you for flying Matchstic Air. We wish you a pleasant onward journey.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--uri', type=str, required=True, help="URI to connect with for MAVLink data. e.g., udp:127.0.0.1:14550")
-    parser.add_argument('--video', required=False, default=False, help="Specify to save video of detections", action='store_true')
+    parser.add_argument('--video', required=False, default=True, help="Specify to save video of detections", action='store_true')
     parser.add_argument('--log_path', type=str, required=False, default=os.path.join(PARENT_DIRECTORY, 'logs'), help="Path to save log output into")
     parser.add_argument('--video_path', type=str, required=False, default=os.path.join(PARENT_DIRECTORY, 'videos'), help="Path to save video into")
     parser.add_argument('--killswitch_path', type=str, required=False, default=os.path.join(PARENT_DIRECTORY, 'killswitch'), help="Path to a file that if exists, this program will do nothing when ran")

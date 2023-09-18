@@ -55,12 +55,12 @@ class Core:
     def modeCallback(self, _, _1, _2) -> None:
         print("Vehicle mode %s" % (self.vehicle.mode,))
 
-        if self.vehicle.mode.name != "GUIDED" and self.state not in [ExecutionState.Init, ExecutionState.ConnectionLoss, ExecutionState.Stop]:
+        if self.vehicle.mode.name != "GUIDED_NOGPS" and self.state not in [ExecutionState.Init, ExecutionState.ConnectionLoss, ExecutionState.Stop]:
             self.state = ExecutionState.PilotOnly
-        elif self.vehicle.mode.name == "GUIDED":
+        elif self.vehicle.mode.name == "GUIDED_NOGPS":
             if self.isReady() and self.isConnected():
                 # Go into loiter mode because this is totally undefined now
-                # The pilot needs to set the vehicle down and then switch back into GUIDED
+                # The pilot needs to set the vehicle down and then switch back into GUIDED_NOGPS
                 print('Cannot restart core flow due to being airborne!')
                 setPositionTarget(self.vehicle, (0,0), 0)
                 return
@@ -84,28 +84,25 @@ class Core:
 
     def isReady(self) -> bool:
         return self.vehicle.armed and \
-                self.vehicle.mode.name == "GUIDED" and \
-                self.camera.running() and \
-                self.vehicle.location.global_relative_frame.alt > 0.5 # Indicates we are actually flying
+                self.vehicle.mode.name == "GUIDED_NOGPS" and \
+                self.camera.running()
 
     def isAltitudeOk(self) -> bool:
         # TODO: This does not account for altitude at current position, only from home
-        return self.vehicle.location.global_relative_frame.alt >= ALTITUDE - ALTITUDE_FUZZINESS
+        return True
 
     def isConnected(self) -> bool:
         return self.vehicle.last_heartbeat < HEARTBEAT_TIMEOUT
 
     def armable(self) -> bool:
-        return not self.vehicle.armed and \
-                self.vehicle.is_armable and \
-                self.vehicle.mode.name == "GUIDED" and \
+        #return not self.vehicle.armed and \
+        return  self.vehicle.mode.name == "GUIDED_NOGPS" and \
                 self.camera.running()
 
     #### State machine
 
     def run(self) -> None:
         while not self.state is ExecutionState.Stop:
-
             if self.state is ExecutionState.Init:
                 # Do nothing during setup.
                 time.sleep(1)
@@ -136,7 +133,7 @@ class Core:
                 if self.state != ExecutionState.Takeoff: continue
 
                 print('Take off to ' + str(ALTITUDE) + 'm')
-                self.vehicle.simple_takeoff(ALTITUDE)
+                # self.vehicle.simple_takeoff(ALTITUDE)
 
                 # Wait until the vehicle reaches altitude
                 self.state = ExecutionState.AwaitingReady
@@ -152,7 +149,7 @@ class Core:
                     self.state = ExecutionState.Running
 
                 # Shouldn't really happen, but here just in case!
-                elif self.vehicle.mode.name != 'GUIDED':
+                elif self.vehicle.mode.name != 'GUIDED_NOGPS':
                     self.state = ExecutionState.PilotOnly
 
                 time.sleep(0.1)
@@ -174,6 +171,7 @@ class Core:
 
                 # Apply local translation and yaw differential
                 position, yaw = state
+                #  print(f'Position: {position}, Yaw: {yaw}')
                 setPositionTarget(self.vehicle, position, yaw)
 
                 time.sleep(0.01)
@@ -204,3 +202,4 @@ class Core:
 
         # Cleanup
         self.vehicle.close()
+

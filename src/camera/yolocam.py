@@ -12,6 +12,8 @@ from constants import DETECTION_THRESH
 
 THREAD_STOP = False
 BLOB_PATH   = str((Path(__file__).parent / Path('../../models/yolo-v4-tiny-tf_openvino_2021.4_6shave.blob')).resolve().absolute())
+# BLOB_PATH   = str((Path(__file__).parent / Path('../../models/best_openvino_2022.1_6shave.blob')).resolve().absolute())
+
 RUNNING     = False
 
 def thread(callback, _pipeline, outputFrames):
@@ -33,6 +35,8 @@ def thread(callback, _pipeline, outputFrames):
 
         print('Camera has started, outputting frames: ' + str(outputFrames))
         RUNNING = True
+
+        monitor_z = 0
 
         while THREAD_STOP == False:
             inPreview = previewQueue.get()
@@ -85,6 +89,8 @@ def thread(callback, _pipeline, outputFrames):
                     cv2.putText(frame, "X (m): 0", (xStart, yHeight), font, fontSize, color)
                     cv2.putText(frame, "Y (m): 0", (xStart, yHeight*2), font, fontSize, color)
                     cv2.putText(frame, "Z (m): 0", (xStart, yHeight*3), font, fontSize, color)
+
+                    monitor_z = 0
                 else:
                     closest = None
 
@@ -96,7 +102,9 @@ def thread(callback, _pipeline, outputFrames):
                     cv2.putText(frame, f"Y (m): {closest.y:.2f}", (xStart, yHeight*2), font, fontSize, color)
                     cv2.putText(frame, f"Z (m): {closest.z:.2f}", (xStart, yHeight*3), font, fontSize, color)
 
-            callback(personDetections, frame if outputFrames else None)
+                    monitor_z = closest.z
+
+            callback(personDetections, frame, monitor_z if outputFrames else None)
 
         RUNNING = False
 
@@ -149,7 +157,12 @@ class YoloCamera(BaseCamera):
         self._monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         # setting node configs
-        self._stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        self._stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
+
+        # Align depth map to the perspective of RGB camera, on which inference is done
+        self._stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+        self._stereo.setOutputSize(416,416)
+        self._stereo.setSubpixel(True)
 
         self._spatialDetectionNetwork.setBlobPath(BLOB_PATH)
         self._spatialDetectionNetwork.setConfidenceThreshold(DETECTION_THRESH)
@@ -159,11 +172,13 @@ class YoloCamera(BaseCamera):
         self._spatialDetectionNetwork.setDepthUpperThreshold(10000)
 
         # Yolo specific parameters
-        self._spatialDetectionNetwork.setNumClasses(80)
+        self._spatialDetectionNetwork.setNumClasses(1)
         self._spatialDetectionNetwork.setCoordinateSize(4)
         self._spatialDetectionNetwork.setAnchors(np.array([10,14, 23,27, 37,58, 81,82, 135,169, 344,319]))
         self._spatialDetectionNetwork.setAnchorMasks({ "side26": np.array([1,2,3]), "side13": np.array([3,4,5]) })
         self._spatialDetectionNetwork.setIouThreshold(0.5)
+
+        self._spatialDetectionNetwork.setSpatialCalculationAlgorithm(dai.SpatialLocationCalculatorAlgorithm.MEDIAN)
 
         # Linking
         self._monoLeft.out.link(self._stereo.left)
@@ -181,6 +196,7 @@ class YoloCamera(BaseCamera):
         return RUNNING
 
     def start(self):
+        global zplot
         self._thread = threading.Thread(target=thread, args=(self._callback, self._pipeline, self._userCallback != None))
         self._thread.start()
 
@@ -190,11 +206,11 @@ class YoloCamera(BaseCamera):
 
         self._thread.join(5)
 
-    def _callback(self, detections, frame):
+    def _callback(self, detections, frame, z = 0):
         self._detections = detections
-
+        
         if self._userCallback != None:
-            self._userCallback(detections, frame)
+            self._userCallback(detections, frame, z)
 
     def detections(self):
         return self._detections
