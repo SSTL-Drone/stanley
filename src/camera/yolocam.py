@@ -172,7 +172,7 @@ class YoloCamera(BaseCamera):
         self._spatialDetectionNetwork.setDepthUpperThreshold(10000)
 
         # Yolo specific parameters
-        self._spatialDetectionNetwork.setNumClasses(1)
+        self._spatialDetectionNetwork.setNumClasses(80)
         self._spatialDetectionNetwork.setCoordinateSize(4)
         self._spatialDetectionNetwork.setAnchors(np.array([10,14, 23,27, 37,58, 81,82, 135,169, 344,319]))
         self._spatialDetectionNetwork.setAnchorMasks({ "side26": np.array([1,2,3]), "side13": np.array([3,4,5]) })
